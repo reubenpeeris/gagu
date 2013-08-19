@@ -1,0 +1,74 @@
+#!/bin/bash
+#Converts a git log into a graphviz dot file. This passes all argumnets on to the 'git log' command.
+
+#Check arguments
+output=$(git log "$@" 2>&1)
+if [[ $? -ne 0 ]]; then
+	echo "$output"
+	exit
+fi
+
+#Output dot file
+echo 'digraph git {';
+echo '  rankdir=BT';
+echo '  node [shape=circle fontname=Inconsolata]';
+
+#Parents
+oldifs=$IFS
+IFS=$'\n'
+for line in $(git log --pretty='format:%h %p' "$@"); do
+	IFS=" "
+	hashes=($line)
+	if [[ ${#hashes[@]} -gt 1 ]]; then
+		hash=${hashes[0]}
+		unset hashes[0]
+		for parent in "${hashes[@]}"; do
+			echo "  \"$hash\" -> \"$parent\""
+		done
+	else
+		echo "  \"${hashes[0]}\" -> \"       \""
+	fi
+done
+IFS=$oldifs
+
+#Tags
+echo '  edge [arrowhead=none]'
+echo '  node [shape=note]';
+declare -A tags
+for tag in $(git tag); do
+        hash=$(git rev-list --max-count=1 "$tag" --pretty='format:%h' | tail -n 1)
+        tags[$hash]+=" $tag"
+done
+
+for hash in $(git log --pretty='format:%h' "$@"); do
+	hash_tags=${tags[$hash]}
+	if [[ "" != "$hash_tags" ]]; then
+		for tag in $hash_tags; do
+			echo "  \"$hash\" -> \"$tag\""
+		done
+	fi
+done
+
+#Branches
+echo '  node [shape=rectangle]';
+declare -A branches
+for branch in $(git branch | sed 's/\*\? \+//' | grep -v '(no branch)'); do
+        hash=$(git rev-list --max-count=1 "$branch" --pretty='format:%h' | tail -n 1)
+	branches[$hash]+=" $branch"
+done
+
+for hash in $(git log --pretty='format:%h' "$@"); do
+        hash_branches=${branches[$hash]}
+        if [[ "" != "$hash_branches" ]]; then
+		for branch in $hash_branches; do
+	                echo "  \"$hash\" -> \"$branch\""
+		done
+        fi
+done
+
+#Commit info
+echo '  node [shape=plaintext fontname=DejaVuSans fontcolor=grey]'
+echo '  edge [color=grey]'
+git log --pretty='format:  "%h" -> "%h-l" %n  "%h-l" [label = "%f (%aN)"]%n  {rank=same; "%h"; "%h-l"}' "$@"
+
+echo '}';

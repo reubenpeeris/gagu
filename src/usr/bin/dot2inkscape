@@ -1,0 +1,6 @@
+#!/bin/sh
+file=$(mktemp --suffix .svg)
+dot -Tsvg > $file
+inkscape $file
+rm $file
+

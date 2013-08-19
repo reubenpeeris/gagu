@@ -1,0 +1,9 @@
+Package: git-graph
+Version: 0.9
+Section: vcs
+Priority: extra
+Architecture: all
+Depends: bash (>= 3), git
+Recomends: graphviz
+Maintainer: Reuben Peeris <reubenpeeris@gmail.com>
+Description: Tools to render the git log using graphviz
