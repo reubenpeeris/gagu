@@ -1,0 +1,329 @@
+#!/bin/bash
+
+declare -A settings=(
+	[_.fontname]=DejaVuSans
+
+	[tag.enabled]=true
+	[tag.color]=red4
+	[tag.shape]=note
+	[tag.fontname]=*_.fontname
+	[tag.style]=solid
+	[tag.arrowhead]=normal
+	
+	[head.enabled]=true
+	[head.color]=green4
+	[head.shape]=rectangle
+	[head.fontname]=*_.fontname
+	[head.style]=dashed
+	[head.arrowhead]=none
+	
+	[remote.enabled]=true
+	[remote.color]=*head.color
+	[remote.shape]=*head.shape
+	[remote.fontname]=*head.fontname
+	[remote.style]=solid
+	[remote.arrowhead]=*head.arrowhead
+	[remote.trim]=false
+	
+	[label.enabled]=true
+	[label.color]=grey
+	[label.shape]=plaintext
+	[label.fontname]=*_.fontname
+	[label.style]=solid
+	[label.arrowhead]=none
+	[label.includeauthor]=true
+	
+	[commit.color]=black
+	[commit.shape]=circle
+	[commit.fontname]=Inconsolata
+	[commit.style]=solid
+	[commit.arrowhead]=normal
+	
+	[nonprimary.color]=*commit.color
+	[nonprimary.style]=dotted
+	[nonprimary.arrowhead]=*commit.arrowhead
+	
+	[precommit.color]=grey
+	[precommit.shape]=*commit.shape
+	[precommit.fontname]=*commit.fontname
+	[precommit.style]=dashed
+)
+
+help() {
+	echo 'Usage: git graph [-p] [-s setting1=value1,...] [git-log-arguments]'
+	echo '       git graph -h'
+	echo
+	echo ' -s setings  apply each of the graph settings'
+	echo ' -p          print settings and exit'
+	echo ' -h          print this help message and exit'
+	exit
+}
+
+parse_options() {
+	local OPTERR=0
+        local OPTIND=1
+	unset print
+        while getopts "hps:" opt; do
+		case "$opt" in
+		h|\?|:)
+			help
+			;;
+		p)
+			local print=1
+			;;
+		s)
+			parse_settings "$OPTARG"
+			;;
+		esac
+	done
+
+	shift $((OPTIND-1))
+	diffargs=( "$@" )
+	if [ -n "$print" ]; then
+		print_settings
+		exit 0
+	fi
+}
+
+parse_settings() {
+	IFS=',' read -ra args <<< "$1"
+	for arg in "${args[@]}"; do
+		local index=$(expr index "$arg" =)
+		if [ $index -eq 0 ]; then
+			echo usage
+			exit 1
+		fi
+		local key="${arg:0:$index-1}"
+		local value="${arg:$index}"
+		
+		if [ -z "${settings[$key]}" ]; then
+			if [[ "$key" != _.?* ]]; then
+				echo "Invalid setting: $key"
+				echo " setting must either be concrete setting or pseudo setting starting with '_.'"
+				echo " for a list of settings use the '-s' option"
+				exit 1
+			fi
+		fi
+	
+		if [[ "$value" == \** ]]; then
+			local pointer="${value:1}"
+			if [ -z "${settings[$pointer]}" ]; then
+				echo "invalid value: $value"
+				exit 1
+			fi
+		fi
+		settings["$key"]="$value"
+	done
+
+	check_settings
+}
+
+contains() {
+	local needle="$1"
+	shift
+	for hey in "$@"; do
+		if [ "$needle" == "$hey" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+find_setting() {
+	local setting="${settings[$1]}"
+	if [[ "$setting" == \** ]]; then
+		local pointer="${setting:1}"
+		if contains "$pointer" "$@"; then
+			return 1
+		fi
+
+		find_setting "$pointer" "$@"
+	else
+		echo "$setting"
+		if [ "true" != "$setting" ]; then
+			exit 1
+		fi
+	fi
+}
+
+check_settings() {
+	for key in "${!settings[@]}"; do
+		local value
+		if ! value="$(find_setting "$key")"; then
+			echo "Loop detected in definition of $key"
+			exit 1
+		fi
+	done
+}
+
+print_settings() {
+	readarray -t sorted < <(printf '%s\0' "${!settings[@]}" | sort -Vz | xargs -0n1)
+	for key in "${sorted[@]}"; do
+		echo "$key=${settings[$key]}"
+	done
+}
+
+add_constraints() {
+	settings["tag.constraint"]=false
+        settings["head.constraint"]=false
+        settings["remote.constraint"]=false
+        settings["label.constraint"]=true
+        settings["commit.constraint"]=true
+        settings["nonprimary.constraint"]=true
+}
+
+setting() {
+	local category="$1"
+	local setting="$2"
+	local settinglookup="$setting"
+	if [ "$setting" == "fontcolor" ]; then
+		settinglookup=color
+	fi
+	echo "$setting=\"$(find_setting $category.$settinglookup)\""
+}
+
+output_setting() {
+	local type=$1
+	local category=$2
+	shift 2
+	local message=" $type [ "
+	for property in "$@"; do
+		message+="$(setting $category $property) "
+	done
+	message+="]"
+	echo "$message"
+}
+
+edge() {
+	local category=$1
+	output_setting edge $category color style arrowhead constraint
+}
+
+node() {
+	local category=$1
+	output_setting node $category shape style fontname fontcolor color
+}
+
+rel() {
+	local category=$1
+        type=$1
+	if [ "true" == "$(find_setting ${category}.enabled)" ]; then
+		edge $category
+                eval echo -e "\"\${rel_${type}}\""
+	fi
+}
+
+parse_refs() {
+        for ref in $2; do
+                ref=${ref%)}
+                ref=${ref%,}
+                ref=${ref#(}
+                ref=${ref#refs/}
+                if [[ $ref == $1/* ]] && ! [[ $ref == $1/*/HEAD ]]; then
+                        echo -n "${ref#$1/} "
+                fi
+        done
+}
+
+generate_graph() {
+	local rel_label=""
+	local rel_tag=""
+	local rel_head=""
+	local rel_remote=""
+	local rel_parents=""
+	local rel_nonprimary=""
+	IFS=$'\n'
+	for line in $(git log --decorate=full --pretty="format:%h|%f|%aN| %d | %p " "${diffargs[@]}"); do
+	        IFS='|'
+	        if [ -z "$fields" ]; then
+	                echo "digraph git {"
+	                echo " rankdir=\"BT\""
+	                echo " graph[style=\"invis\"]"
+	        fi
+	
+	        local fields=($line)
+	        IFS=' '
+	        local hash=${fields[0]}
+	        local subject=${fields[1]}
+	        local author=${fields[2]}
+	        local tags=$(parse_refs tags "${fields[3]}")
+	        local heads=$(parse_refs heads "${fields[3]}")
+	        local remotes=$(parse_refs remotes "${fields[3]}")
+	        local parents=${fields[4]}
+	
+	        echo
+	        echo " subgraph \"cluster_${hash}\" {"
+	        node commit
+	        echo "  \"$hash\""
+	
+	        if [ "true" == "$(find_setting tag.enabled)" ] && [ -n "$tags" ]; then
+	                node tag
+	                for tag in $tags; do
+	                        echo "  \"$tag\""
+	                        rel_tag+=" \"$tag\" -> \"$hash\"\n"
+	                done
+	        fi
+	
+	        if [ "true" == "$(find_setting head.enabled)" ] && [ -n "$heads" ]; then
+	                node head
+	                for head in $heads; do
+	                        echo "  \"$head\""
+	                        rel_head+=" \"$head\" -> \"$hash\"\n"
+	                done
+	        fi
+	
+	        if [ "true" == "$(find_setting remote.enabled)" ] && [ -n "$remotes" ]; then
+	                node remote
+	                for remote in $remotes; do
+	                        remote_label=$remote
+	                        [ "true" == "$(find_setting remote.trim)" ] && remote_label=${remote#*/}
+	                        echo "  \"$remote\" [label=\"$remote_label\"]"
+	                        rel_remote+=" \"$remote\" -> \"$hash\"\n"
+	                done
+	        fi
+	
+	        if [ "true" == "$(find_setting label.enabled)" ]; then
+	                label=$subject
+	                [ "true" == "$(find_setting label.includeauthor)" ] && label="$subject ($author)"
+	                node label
+	                echo "  \"$hash-l\" [label=\"$label\"]"
+	                rel_label+=" \"$hash\" -> \"$hash-l\"\n"
+	                echo "  {rank=same; \"$hash\"; \"$hash-l\"}"
+	        fi
+	
+	        echo " }"
+	
+	        if [[ $parents =~ ^\ +$ ]]; then
+	                rel_parents+=" \"$hash\" -> \"      \"\n"
+	        fi
+	        first=1
+	        for parent in $parents; do
+	                if [ 1 == $first ]; then
+	                        rel_parents+=" \"$hash\" -> \"$parent\"\n"
+	                        first=0
+	                else
+	                        rel_nonprimary+=" \"$hash\" -> \"$parent\"\n"
+	                fi
+	        done
+	done
+	
+	echo
+	rel label
+	rel tag
+	rel head
+	rel remote
+	
+	node precommit
+	edge commit
+	echo -e "$rel_parents"
+	if [ -n "$nonprimary" ]; then
+		edge nonprimary
+		echo -e "$rel_nonprimary"
+	fi
+	
+	echo '}'
+}
+
+parse_options "$@"
+add_constraints
+generate_graph

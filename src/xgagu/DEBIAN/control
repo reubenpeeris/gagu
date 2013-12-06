@@ -1,0 +1,8 @@
+Package: xgagu
+Version: 0.9
+Section: x11
+Priority: extra
+Architecture: all
+Depends: gagu (=0.9), bash (>= 4), inkscape, ttf-dejavu-core, fonts-inconsolata, meld
+Maintainer: Reuben Peeris <reubenpeeris@gmail.com>
+Description: Git and gerrit utils. A collection of scripts that can be handy when working with git and gerrit. This package contains the tools that require x11.

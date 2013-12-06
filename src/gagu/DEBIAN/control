@@ -1,0 +1,9 @@
+Package: gagu
+Version: 0.9
+Section: vcs
+Priority: extra
+Architecture: all
+Depends: bash (>= 4), git, graphviz, openssh-client
+Recommends: inkscape, ttf-dejavu-core, fonts-inconsolata, meld
+Maintainer: Reuben Peeris <reubenpeeris@gmail.com>
+Description: Git and gerrit utils. A collection of scripts that can be handy when working with git and gerrit.

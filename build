@@ -1,5 +1,7 @@
 #!/bin/bash
-package=`sed -n 's/^Package: \+//p' src/DEBIAN/control`
-version=`sed -n 's/^Version: \+//p' src/DEBIAN/control`
-architecture=`sed -n 's/^Architecture: \+//p' src/DEBIAN/control`
-dpkg-deb --build src "$package-$version-$architecture.deb"
+for folder in src/*; do
+	package=$(sed -n 's/^Package: \+//p' $folder/DEBIAN/control)
+	version=$(sed -n 's/^Version: \+//p' $folder/DEBIAN/control)
+	architecture=$(sed -n 's/^Architecture: \+//p' $folder/DEBIAN/control)
+	dpkg-deb --build $folder "$package-$version-$architecture.deb"
+done

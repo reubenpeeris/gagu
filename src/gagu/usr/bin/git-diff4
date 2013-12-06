@@ -1,0 +1,87 @@
+#!/bin/bash
+
+#git config --global diff.tool meld
+#git config --global difftool.meld.path /usr/bin/meld
+#git config --global difftool.prompt false
+#git config --global merge.tool meld
+#git config --global mergetool.meld.path /usr/bin/meld
+#git config --global mergetool.prompt false
+
+. /usr/share/gagu/utils
+
+#gets the diff tool command using the same presedence as git difftool uses
+diff-tool() {
+ dtool=$(git config --get diff.tool)
+ dpath=$(git config --get difftool.$dtool.path)
+ mtool=$(git config --get merge.tool)
+ mpath=$(git config --get mergetool.$mtool.path)
+
+ echo ${dpath:-${dtool:-${mpath:-${mtool:-diff}}}}
+}
+
+usage() {
+	echo 'Usage: git diffdiff <diff-spec> [<diff-spec>] [git-diff-options] [-- <path>...]'
+	echo ' If the second <diff-spec> is ommitted, it will have the same effect as using HEAD'
+	echo ' Where diff-spec can be of the following formats'
+	echo '  <commit>..<commit>   Usual git diff meaning'
+	echo '  <commit>...<commit>  Usual git diff meaning'
+	echo '  <commit>             Equivalent to <commit>~..<commit>'
+	exit 2
+}
+
+parse-args() {
+	if [ $# -lt 1 ]; then
+		usage
+	fi
+	rev1="$1"
+	shift
+
+	if [[ "$1" == -* ]]; then
+		rev2="HEAD"
+	elif [ -z "$1" ]; then
+		rev2="HEAD"
+	else
+		rev2="$1"
+		shift
+	fi
+
+	if [[ "$rev1" != *\.\.* ]]; then 
+		rev1="$rev1~..$rev1"
+	fi
+	if [[ "$rev2" != *\.\.* ]]; then  
+        	rev2="$rev2~..$rev2"
+	fi
+
+	local extras=("$@")
+
+	for (( i=0; i < ${#extras[@]}; i++ )); do
+		if [ "${extras[$i]}" == "--" ]; then
+			options=("${extras[@]::$i}")
+			paths=("${extras[@]:$i:${#extras[@]}}")
+		fi
+	done
+
+	if [ -z "$options" ]; then
+		options=("${extras[@]}")
+	fi
+}
+
+make-temp-files() {
+	trap 'rm -Rf "$folder"' exit
+	folder="$(tempfile)"
+	rm "$folder"
+	mkdir "$folder"
+	file1="$folder/${rev1//\//_}"
+	file2="$folder/${rev2//\//_}"
+}
+
+make-patches() {
+	git diff "${options[@]}" "$rev1" "${paths[@]}" > "$file1" || exit 3
+	git diff "${options[@]}" "$rev2" "${paths[@]}" > "$file2" || exit 3
+}
+
+parse-args "$@"
+make-temp-files
+make-paches
+
+"$(diff-tool)" "$file1" "$file2"

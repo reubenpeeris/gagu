@@ -1,0 +1,34 @@
+#!/bin/bash
+. /usr/share/gagu/utils
+require-package inkscape
+
+usage() {
+	echo "Usage: dot2inkscape [dot-options]"
+	echo " dot-options options to be passed to the dot command (-T or -V will be ignored)"
+	echo " a dot file is required on the standard input"
+	exit 1
+}
+
+parse-args() {
+	if [ -t 0 ]; then
+		echo "Standard in is a terminal"
+		usage
+	fi
+
+	dotargs=()
+	for arg in "$@"; do
+                if [[ "$arg" != -[TV]* ]]; then
+			dotargs+=("$arg")
+                fi
+        done
+}
+
+dot2inkscape() {
+	trap 'rm -f "$file"' exit
+	file=$(mktemp --suffix .svg)
+	dot -Tsvg "${dotargs[@]}" > $file
+	inkscape $file
+}
+
+parse-args "$@"
+dot2inkscape

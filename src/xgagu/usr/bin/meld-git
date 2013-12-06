@@ -1,0 +1,10 @@
+#!/bin/bash
+. /usr/share/gagu/utils
+require-package meld
+
+if [ $# -lt 2 ]; then
+	echo "Usage: meld-git <file> <file> [ignored-parameters]"
+	echo "       meld-git <folder> <folder> [ignored-parameters]"
+fi
+
+meld "$1" "$2"

@@ -1,0 +1,81 @@
+#!/bin/bash
+#requires bash 4
+. /usr/share/rgit/ssh-nopass
+
+help() {
+	echo 'Usage: git fetch-patches [-d|-t|-T] [change-number]'
+	echo '       git fetch-patches -h'
+	echo
+	echo ' -t             create and checkout tags'
+	echo ' -T             as for -t but overwriting exisiting tags if they exist'
+	echo ' -d             delete existing tags'
+	echo ' -h             print this help message and exit'
+	echo ' change-number  fetch only patches for specified change (e.g. 23)'
+	exit
+}
+
+parse_cli() {
+	local OPTERR=0
+	local OPTIND=1
+	while getopts "dhTt" opt; do
+		case "$opt" in
+		h|\?|:)
+			help
+			;;
+		T)
+			tagoptions="-f"
+			;&
+		t)
+			tags=1
+			;;
+		d)
+			delete=1
+			;;
+		esac
+	done
+	shift $((OPTIND-1))
+
+	if [ $# -gt 1 ]; then
+		help
+	fi
+	change="$1"
+	if [[ -z "$change" ]]; then
+		change="*"
+		folder="*"
+	else	
+		folder="00$1"
+		folder="${folder:(-2)}"
+	fi
+}
+
+delete_tags() {
+	for ref in $(git ls-remote origin "refs/changes/$folder/$change/*" | cut -f 2); do
+		if git tag --list $ref | grep -q '.'; then
+			git tag -d $ref
+		fi
+	done
+}
+
+fetch_patches() {
+	echo "Fetching patchset for change $change"
+	for ref in $(git ls-remote origin "refs/changes/$folder/$change/*" | cut -f 2); do
+		git fetch origin $ref
+		if [ -n "$tags" ]; then
+			git checkout -q FETCH_HEAD
+			local message="$(git tag -a $tagoptions $ref -m 'code review tag' 2>&1)"
+			if [ "$message" != "" ]; then
+				echo "$message"
+			else
+				echo "Added tag '$ref'"
+			fi
+		fi
+	done
+}
+
+parse_cli "$@"
+if [ -n "$delete" ]; then
+	delete_tags
+else
+	fetch_patches
+fi
+

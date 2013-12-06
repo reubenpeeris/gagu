@@ -1,0 +1,13 @@
+#!/bin/bash
+git status > /dev/null || exit $?
+forbranch="$1"
+branch="$(git branch | sed -n 's/* \([^(]\)/\1/p')"
+
+[ -z "$forbranch" ] && echo "no forbranch specified" && exit 1
+[ -z "$branch" ] && echo "not on a branch" && exit 2
+
+trap 'git checkout "$branch"' exit
+git checkout -q $(git rev-parse HEAD)
+git rebase "origin/$forbranch" --no-ff
+git push origin "HEAD:refs/for/$forbranch"
+

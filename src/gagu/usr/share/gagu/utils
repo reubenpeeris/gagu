@@ -1,0 +1,17 @@
+#some utils used by gagu
+
+check-git() {
+        git status > /dev/null || exit 1
+}
+
+require-package() {
+	if [ $# -ne 1 ]; then
+		echo no package specified
+		exit 1
+	fi
+	local package="$1"
+	if ! dpkg-query -W --showformat='${Status}\n' "$package" 2>/dev/null | grep -q 'install ok install'; then
+        	echo "error: $package required but not installed"
+	        exit 1
+	fi
+}
