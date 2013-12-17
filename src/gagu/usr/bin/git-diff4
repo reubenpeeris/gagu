@@ -82,6 +82,6 @@ make-patches() {
 
 parse-args "$@"
 make-temp-files
-make-paches
+make-patches
 
 "$(diff-tool)" "$file1" "$file2"
