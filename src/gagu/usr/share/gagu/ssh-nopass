@@ -4,11 +4,11 @@
 
 no_pass_file=~/.ssh/id_rsa_nopass
 
-[ -r "$no_pass_file" ] || return
+[[ -r "$no_pass_file" ]] || return
 ssh-add -L | grep -q id_rsa_nopass && return
 ssh-agent bash -c 'output=$(ssh-add '"$no_pass_file"' 2>&1)
 	code=$?
-	if [ 0 -eq $code ]; then
+	if [[ 0 -eq $code ]]; then
 		 source '"$0"' "$@"
 	else
 		echo "$output"

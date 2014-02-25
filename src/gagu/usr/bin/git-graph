@@ -61,9 +61,9 @@ help() {
 
 parse_options() {
 	local OPTERR=0
-        local OPTIND=1
+	local OPTIND=1
 	unset print
-        while getopts "hps:" opt; do
+	while getopts "hps:" opt; do
 		case "$opt" in
 		h|\?|:)
 			help
@@ -79,7 +79,7 @@ parse_options() {
 
 	shift $((OPTIND-1))
 	diffargs=( "$@" )
-	if [ -n "$print" ]; then
+	if [[ -n "$print" ]]; then
 		print_settings
 		exit 0
 	fi
@@ -89,14 +89,14 @@ parse_settings() {
 	IFS=',' read -ra args <<< "$1"
 	for arg in "${args[@]}"; do
 		local index=$(expr index "$arg" =)
-		if [ $index -eq 0 ]; then
+		if [[ $index -eq 0 ]]; then
 			echo usage
 			exit 1
 		fi
 		local key="${arg:0:$index-1}"
 		local value="${arg:$index}"
 		
-		if [ -z "${settings[$key]}" ]; then
+		if [[ -z "${settings[$key]}" ]]; then
 			if [[ "$key" != _.?* ]]; then
 				echo "Invalid setting: $key"
 				echo " setting must either be concrete setting or pseudo setting starting with '_.'"
@@ -107,7 +107,7 @@ parse_settings() {
 	
 		if [[ "$value" == \** ]]; then
 			local pointer="${value:1}"
-			if [ -z "${settings[$pointer]}" ]; then
+			if [[ -z "${settings[$pointer]}" ]]; then
 				echo "invalid value: $value"
 				exit 1
 			fi
@@ -122,7 +122,7 @@ contains() {
 	local needle="$1"
 	shift
 	for hey in "$@"; do
-		if [ "$needle" == "$hey" ]; then
+		if [[ "$needle" == "$hey" ]]; then
 			return 0
 		fi
 	done
@@ -140,7 +140,7 @@ find_setting() {
 		find_setting "$pointer" "$@"
 	else
 		echo "$setting"
-		if [ "true" != "$setting" ]; then
+		if [[ "true" != "$setting" ]]; then
 			exit 1
 		fi
 	fi
@@ -165,18 +165,18 @@ print_settings() {
 
 add_constraints() {
 	settings["tag.constraint"]=false
-        settings["head.constraint"]=false
-        settings["remote.constraint"]=false
-        settings["label.constraint"]=true
-        settings["commit.constraint"]=true
-        settings["nonprimary.constraint"]=true
+	settings["head.constraint"]=false
+	settings["remote.constraint"]=false
+	settings["label.constraint"]=true
+	settings["commit.constraint"]=true
+	settings["nonprimary.constraint"]=true
 }
 
 setting() {
 	local category="$1"
 	local setting="$2"
 	local settinglookup="$setting"
-	if [ "$setting" == "fontcolor" ]; then
+	if [[ "$setting" == "fontcolor" ]]; then
 		settinglookup=color
 	fi
 	echo "$setting=\"$(find_setting $category.$settinglookup)\""
@@ -206,23 +206,23 @@ node() {
 
 rel() {
 	local category=$1
-        type=$1
-	if [ "true" == "$(find_setting ${category}.enabled)" ]; then
+	type=$1
+	if [[ "true" == "$(find_setting ${category}.enabled)" ]]; then
 		edge $category
-                eval echo -e "\"\${rel_${type}}\""
+		eval echo -e "\"\${rel_${type}}\""
 	fi
 }
 
 parse_refs() {
-        for ref in $2; do
-                ref=${ref%)}
-                ref=${ref%,}
-                ref=${ref#(}
-                ref=${ref#refs/}
-                if [[ $ref == $1/* ]] && ! [[ $ref == $1/*/HEAD ]]; then
-                        echo -n "${ref#$1/} "
-                fi
-        done
+	for ref in $2; do
+		ref=${ref%)}
+		ref=${ref%,}
+		ref=${ref#(}
+		ref=${ref#refs/}
+		if [[ $ref == $1/* ]] && ! [[ $ref == $1/*/HEAD ]]; then
+			echo -n "${ref#$1/} "
+		fi
+	done
 }
 
 generate_graph() {
@@ -234,77 +234,77 @@ generate_graph() {
 	local rel_nonprimary=""
 	IFS=$'\n'
 	for line in $(git log --decorate=full --pretty="format:%h|%f|%aN| %d | %p " "${diffargs[@]}"); do
-	        IFS='|'
-	        if [ -z "$fields" ]; then
-	                echo "digraph git {"
-	                echo " rankdir=\"BT\""
-	                echo " graph[style=\"invis\"]"
-	        fi
+		IFS='|'
+		if [[ -z "$fields" ]]; then
+			echo "digraph git {"
+			echo " rankdir=\"BT\""
+			echo " graph[style=\"invis\"]"
+		fi
 	
-	        local fields=($line)
-	        IFS=' '
-	        local hash=${fields[0]}
-	        local subject=${fields[1]}
-	        local author=${fields[2]}
-	        local tags=$(parse_refs tags "${fields[3]}")
-	        local heads=$(parse_refs heads "${fields[3]}")
-	        local remotes=$(parse_refs remotes "${fields[3]}")
-	        local parents=${fields[4]}
+		local fields=($line)
+		IFS=' '
+		local hash=${fields[0]}
+		local subject=${fields[1]}
+		local author=${fields[2]}
+		local tags=$(parse_refs tags "${fields[3]}")
+		local heads=$(parse_refs heads "${fields[3]}")
+		local remotes=$(parse_refs remotes "${fields[3]}")
+		local parents=${fields[4]}
 	
-	        echo
-	        echo " subgraph \"cluster_${hash}\" {"
-	        node commit
-	        echo "  \"$hash\""
+		echo
+		echo " subgraph \"cluster_${hash}\" {"
+		node commit
+		echo "  \"$hash\""
 	
-	        if [ "true" == "$(find_setting tag.enabled)" ] && [ -n "$tags" ]; then
-	                node tag
-	                for tag in $tags; do
-	                        echo "  \"$tag\""
-	                        rel_tag+=" \"$tag\" -> \"$hash\"\n"
-	                done
-	        fi
+		if [[ "true" == "$(find_setting tag.enabled)" ]] && [[ -n "$tags" ]]; then
+			node tag
+			for tag in $tags; do
+				echo "  \"$tag\""
+				rel_tag+=" \"$tag\" -> \"$hash\"\n"
+			done
+		fi
 	
-	        if [ "true" == "$(find_setting head.enabled)" ] && [ -n "$heads" ]; then
-	                node head
-	                for head in $heads; do
-	                        echo "  \"$head\""
-	                        rel_head+=" \"$head\" -> \"$hash\"\n"
-	                done
-	        fi
+		if [[ "true" == "$(find_setting head.enabled)" ]] && [[ -n "$heads" ]]; then
+			node head
+			for head in $heads; do
+				echo "  \"$head\""
+				rel_head+=" \"$head\" -> \"$hash\"\n"
+			done
+		fi
 	
-	        if [ "true" == "$(find_setting remote.enabled)" ] && [ -n "$remotes" ]; then
-	                node remote
-	                for remote in $remotes; do
-	                        remote_label=$remote
-	                        [ "true" == "$(find_setting remote.trim)" ] && remote_label=${remote#*/}
-	                        echo "  \"$remote\" [label=\"$remote_label\"]"
-	                        rel_remote+=" \"$remote\" -> \"$hash\"\n"
-	                done
-	        fi
+		if [[ "true" == "$(find_setting remote.enabled)" ]] && [[ -n "$remotes" ]]; then
+			node remote
+			for remote in $remotes; do
+				remote_label=$remote
+				[ "true" == "$(find_setting remote.trim)" ] && remote_label=${remote#*/}
+				echo "  \"$remote\" [label=\"$remote_label\"]"
+				rel_remote+=" \"$remote\" -> \"$hash\"\n"
+			done
+		fi
 	
-	        if [ "true" == "$(find_setting label.enabled)" ]; then
-	                label=$subject
-	                [ "true" == "$(find_setting label.includeauthor)" ] && label="$subject ($author)"
-	                node label
-	                echo "  \"$hash-l\" [label=\"$label\"]"
-	                rel_label+=" \"$hash\" -> \"$hash-l\"\n"
-	                echo "  {rank=same; \"$hash\"; \"$hash-l\"}"
-	        fi
+		if [[ "true" == "$(find_setting label.enabled)" ]]; then
+			label=$subject
+			[ "true" == "$(find_setting label.includeauthor)" ] && label="$subject ($author)"
+			node label
+			echo "  \"$hash-l\" [label=\"$label\"]"
+			rel_label+=" \"$hash\" -> \"$hash-l\"\n"
+			echo "  {rank=same; \"$hash\"; \"$hash-l\"}"
+		fi
 	
-	        echo " }"
+		echo " }"
 	
-	        if [[ $parents =~ ^\ +$ ]]; then
-	                rel_parents+=" \"$hash\" -> \"      \"\n"
-	        fi
-	        first=1
-	        for parent in $parents; do
-	                if [ 1 == $first ]; then
-	                        rel_parents+=" \"$hash\" -> \"$parent\"\n"
-	                        first=0
-	                else
-	                        rel_nonprimary+=" \"$hash\" -> \"$parent\"\n"
-	                fi
-	        done
+		if [[ $parents =~ ^\ +$ ]]; then
+			rel_parents+=" \"$hash\" -> \"      \"\n"
+		fi
+		first=1
+		for parent in $parents; do
+			if [[ 1 == $first ]]; then
+				rel_parents+=" \"$hash\" -> \"$parent\"\n"
+				first=0
+			else
+				rel_nonprimary+=" \"$hash\" -> \"$parent\"\n"
+			fi
+		done
 	done
 	
 	echo
@@ -316,7 +316,7 @@ generate_graph() {
 	node precommit
 	edge commit
 	echo -e "$rel_parents"
-	if [ -n "$nonprimary" ]; then
+	if [[ -n "$nonprimary" ]]; then
 		edge nonprimary
 		echo -e "$rel_nonprimary"
 	fi

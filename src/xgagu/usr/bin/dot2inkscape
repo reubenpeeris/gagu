@@ -1,5 +1,5 @@
 #!/bin/bash
-. /usr/share/gagu/utils
+skip_git_check=0 . /usr/share/gagu/utils
 require-package inkscape
 
 usage() {
@@ -10,17 +10,17 @@ usage() {
 }
 
 parse-args() {
-	if [ -t 0 ]; then
+	if [[ -t 0 ]]; then
 		echo "Standard in is a terminal"
 		usage
 	fi
 
 	dotargs=()
 	for arg in "$@"; do
-                if [[ "$arg" != -[TV]* ]]; then
+		if [[ "$arg" != -[TV]* ]]; then
 			dotargs+=("$arg")
-                fi
-        done
+		fi
+	done
 }
 
 dot2inkscape() {

@@ -1,0 +1,18 @@
+#!/bin/bash
+# Prints a git status message:
+# shows a summary of the HEAD commit including files (in green)
+# and uncommitted files
+
+. /usr/share/gagu/utils
+
+if [[ -t 1 ]]; then
+	reset=$(echo -e '\e[0m')
+	green=$(echo -e '\e[0;32m')
+fi
+
+git log --oneline --decorate HEAD~..
+echo -e $green
+git diff-tree --no-commit-id --name-only -r HEAD | sed -e "s/^/   /"
+echo -e $reset
+git status -s
+

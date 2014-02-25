@@ -35,7 +35,7 @@ parse_cli() {
 	done
 	shift $((OPTIND-1))
 
-	if [ $# -gt 1 ]; then
+	if [[ $# -gt 1 ]]; then
 		help
 	fi
 	change="$1"
@@ -60,10 +60,10 @@ fetch_patches() {
 	echo "Fetching patchset for change $change"
 	for ref in $(git ls-remote origin "refs/changes/$folder/$change/*" | cut -f 2); do
 		git fetch origin $ref
-		if [ -n "$tags" ]; then
+		if [[ -n "$tags" ]]; then
 			git checkout -q FETCH_HEAD
 			local message="$(git tag -a $tagoptions $ref -m 'code review tag' 2>&1)"
-			if [ "$message" != "" ]; then
+			if [[ "$message" != "" ]]; then
 				echo "$message"
 			else
 				echo "Added tag '$ref'"
@@ -73,7 +73,7 @@ fetch_patches() {
 }
 
 parse_cli "$@"
-if [ -n "$delete" ]; then
+if [[ -n "$delete" ]]; then
 	delete_tags
 else
 	fetch_patches

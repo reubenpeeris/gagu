@@ -11,12 +11,12 @@
 
 #gets the diff tool command using the same presedence as git difftool uses
 diff-tool() {
- dtool=$(git config --get diff.tool)
- dpath=$(git config --get difftool.$dtool.path)
- mtool=$(git config --get merge.tool)
- mpath=$(git config --get mergetool.$mtool.path)
+	dtool=$(git config --get diff.tool)
+	dpath=$(git config --get difftool.$dtool.path)
+	 mtool=$(git config --get merge.tool)
+	 mpath=$(git config --get mergetool.$mtool.path)
 
- echo ${dpath:-${dtool:-${mpath:-${mtool:-diff}}}}
+	echo ${dpath:-${dtool:-${mpath:-${mtool:-diff}}}}
 }
 
 usage() {
@@ -30,7 +30,7 @@ usage() {
 }
 
 parse-args() {
-	if [ $# -lt 1 ]; then
+	if [[ $# -lt 1 ]]; then
 		usage
 	fi
 	rev1="$1"
@@ -38,30 +38,30 @@ parse-args() {
 
 	if [[ "$1" == -* ]]; then
 		rev2="HEAD"
-	elif [ -z "$1" ]; then
+	elif [[ -z "$1" ]]; then
 		rev2="HEAD"
 	else
 		rev2="$1"
 		shift
 	fi
 
-	if [[ "$rev1" != *\.\.* ]]; then 
+	if [[ "$rev1" != *\.\.* ]]; then
 		rev1="$rev1~..$rev1"
 	fi
-	if [[ "$rev2" != *\.\.* ]]; then  
-        	rev2="$rev2~..$rev2"
+	if [[ "$rev2" != *\.\.* ]]; then
+		rev2="$rev2~..$rev2"
 	fi
 
 	local extras=("$@")
 
 	for (( i=0; i < ${#extras[@]}; i++ )); do
-		if [ "${extras[$i]}" == "--" ]; then
+		if [[ "${extras[$i]}" == "--" ]]; then
 			options=("${extras[@]::$i}")
 			paths=("${extras[@]:$i:${#extras[@]}}")
 		fi
 	done
 
-	if [ -z "$options" ]; then
+	if [[ -z "$options" ]]; then
 		options=("${extras[@]}")
 	fi
 }
