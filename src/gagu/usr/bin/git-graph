@@ -318,7 +318,7 @@ generate_graph() {
 	node precommit
 	edge commit
 	echo -e "$rel_parents"
-	if [[ -n "$nonprimary" ]]; then
+	if [[ -n "$rel_nonprimary" ]]; then
 		edge nonprimary
 		echo -e "$rel_nonprimary"
 	fi
