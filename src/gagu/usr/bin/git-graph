@@ -233,7 +233,9 @@ generate_graph() {
 	local rel_parents=""
 	local rel_nonprimary=""
 	IFS=$'\n'
-	for line in $(git log --decorate=full --pretty="format:%h|%f|%aN| %d | %p " "${diffargs[@]}"); do
+	#assigning an intermediate variable here will case the script to exit if git-log fails.
+	lines=$(git log --decorate=full --pretty="format:%h|%f|%aN| %d | %p " "${diffargs[@]}")
+	for line in $lines; do
 		IFS='|'
 		if [[ -z "$fields" ]]; then
 			echo "digraph git {"
@@ -324,6 +326,7 @@ generate_graph() {
 	echo '}'
 }
 
+set -e
 parse_options "$@"
 add_constraints
 generate_graph
