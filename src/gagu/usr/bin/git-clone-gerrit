@@ -11,7 +11,7 @@ usage() {
 	echo ' pattern    projects to clone pattern (default: .*)'
 	echo '            pattern is in grep format and matched against the full project name'
 	echo ' -p         server port number (default: 29418)'
-	echo ' -m         update missing'
+	echo ' -u         update missing'
 	echo '            by default an existing project causes an error (meaning no projects'
  	echo '            will be cloned), with this setting, missing projects will be'
 	echo '            cloned and projects missing the commit-msg hook will have it added'
