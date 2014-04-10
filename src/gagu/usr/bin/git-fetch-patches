@@ -1,6 +1,6 @@
 #!/bin/bash
 #requires bash 4
-. /usr/share/rgit/ssh-nopass
+. /usr/share/gagu/ssh-nopass
 
 help() {
 	echo 'Usage: git fetch-patches [-d|-t|-T] [change-number]'
