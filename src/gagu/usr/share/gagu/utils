@@ -4,6 +4,12 @@ check-git() {
 	git status > /dev/null || exit 1
 }
 
+get-git-config() {
+	local config="$1"
+	local default="$2"
+	git config --get "$1" || echo "$2"
+}
+
 require-package() {
 	if [[ $# -ne 1 ]]; then
 		echo no package specified
@@ -16,6 +22,14 @@ require-package() {
 	fi
 }
 
+set-globals() {
+	port="$(get-git-config gagu.server.port 29418)"
+	server="$(get-git-config gagu.server)"
+}
+
 if [[ ! $skip_git_check ]]; then
 	check-git
 fi
+
+set-globals
+

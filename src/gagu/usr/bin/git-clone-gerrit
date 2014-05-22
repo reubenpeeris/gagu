@@ -1,16 +1,18 @@
 #!/bin/bash
 . /usr/share/gagu/ssh-nopass
+skip_git_check=1 . /usr/share/gagu/utils
 
 usage() {
-	echo 'Usage: git-clone-gerrit [-p <port>] [-m] <host> [<pattern>]'
+	echo 'Usage: git-clone-gerrit [-s <server>] [-p <port>] [-u] [<pattern>]'
 	echo '       git-clone-gerrit -h'
 	echo
 	echo 'Clones one or more gerrit repositories and adds the commit-msg hook'
 	echo
-	echo ' host       server hostname or ip address'
 	echo ' pattern    projects to clone pattern (default: .*)'
 	echo '            pattern is in grep format and matched against the full project name'
-	echo ' -p         server port number (default: 29418)'
+	echo ' -s         server name or ip address (default: "gagu.server" git config)'
+	echo ' -p         server port number (default: "gagu.server.port" git config if set,'
+	echo '            otherwise 29418)'
 	echo ' -u         update missing'
 	echo '            by default an existing project causes an error (meaning no projects'
  	echo '            will be cloned), with this setting, missing projects will be'
@@ -23,9 +25,8 @@ parse-args() {
 	local OPTERR=0
 	local OPTIND=1
 	
-	port=29418
 	unset update_missing
-	while getopts "hup:" opt; do
+	while getopts "hup:s:" opt; do
 		case "${opt}" in
 		h|\?\|:)
 			usage
@@ -36,19 +37,26 @@ parse-args() {
 		u)
 			update_missing=1
 			;;
+		s)
+			server="${OPTARG}"
+			;;
 		esac
 	done
 	
+	if [[ -z ${server} ]]; then
+		echo 'error: No server specified (use "gagu.server" git config or the -s argument)'
+		exit 1
+	fi
+
 	shift $((OPTIND-1))
-	if [[ $# -lt 1 || $# -gt 2 ]]; then
+	if [[ $# -gt 1 ]]; then
 		usage
 	fi
-	host="$1"
-	pattern="${2:-.*}"
+	pattern="${1:-.*}"
 }
 
 clone-all() {
-	repos=( $(ssh -p "${port}" "${host}" gerrit ls-projects | grep "^${pattern}\$") )
+	repos=( $(ssh -p "${port}" "${server}" gerrit ls-projects | grep "^${pattern}\$") )
 	unset exists
 	for repo in "${repos[@]}"; do
 		if [[ -e "${repo}" ]]; then
@@ -69,12 +77,12 @@ clone() {
 	echo "processing ${repo}"
 	repo="$1"
 	if [[ ! -e "${repo}" ]]; then
-		git clone ssh://${host}:${port}/${repo};
+		git clone ssh://${server}:${port}/${repo};
 	fi
 
 	dest="${repo}/.git/hooks/commit-msg"
 	if [[ ! -e ${dest} ]]; then
-		scp -p -P "${port}" "${host}:hooks/commit-msg" "${dest}"
+		scp -p -P "${port}" "${server}:hooks/commit-msg" "${dest}"
 	fi
 }
 
