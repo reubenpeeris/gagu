@@ -28,7 +28,7 @@ parse-args() {
 	unset update_missing
 	while getopts "hup:s:" opt; do
 		case "${opt}" in
-		h|\?\|:)
+		h|\?|:)
 			usage
 			;;
 		p)
