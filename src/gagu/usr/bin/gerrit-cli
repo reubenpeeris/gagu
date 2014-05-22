@@ -1,0 +1,53 @@
+#!/bin/bash
+. /usr/share/gagu/ssh-nopass
+skip_git_check=1 . /usr/share/gagu/utils
+
+usage() {
+	echo 'Usage: gerrit-cli [-s <server>] [-p <port>] [command]'
+	echo '       gerrit-cli -h'
+	echo
+	echo 'Executes gerrit server commands'
+	echo
+	echo ' command    gerrit server command (leave blank to print available commands)'
+	echo ' -s         server name or ip address (default: "gagu.server" git config)'
+	echo ' -p         server port number (default: "gagu.server.port" git config if set,'
+	echo '            otherwise 29418)'
+	echo ' -h         print this help message and exit'
+	exit 1
+}
+
+parse-args() {
+	local OPTERR=0
+	local OPTIND=1
+	
+	while getopts "hp:s:" opt; do
+		case "${opt}" in
+		h|\?|:)
+			usage
+			;;
+		p)
+			port="${OPTARG}"
+			;;
+		s)
+			server="${OPTARG}"
+			;;
+		esac
+	done
+	
+	if [[ -z ${server} ]]; then
+		echo 'error: No server specified (use "gagu.server" git config or the -s argument)'
+		exit 1
+	fi
+
+	shift $((OPTIND-1))
+	command="$@"
+}
+
+run-command() {
+	ssh -p ${port} ${server} gerrit "${command[@]}"
+}
+
+set -e
+parse-args "$@"
+run-command
+
