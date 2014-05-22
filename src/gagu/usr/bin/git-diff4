@@ -13,8 +13,8 @@
 diff-tool() {
 	dtool=$(git config --get diff.tool)
 	dpath=$(git config --get difftool.$dtool.path)
-	 mtool=$(git config --get merge.tool)
-	 mpath=$(git config --get mergetool.$mtool.path)
+	mtool=$(git config --get merge.tool)
+	mpath=$(git config --get mergetool.$mtool.path)
 
 	echo ${dpath:-${dtool:-${mpath:-${mtool:-diff}}}}
 }
